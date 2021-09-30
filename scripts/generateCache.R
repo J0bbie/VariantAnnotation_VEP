@@ -1,5 +1,5 @@
 # Usage:
-# Rscript --vanilla generateCache.R -o ~/test
+# Rscript --vanilla generateCache.R -o /mnt/onco0002/repository/software/ensembl-vep/Plugins/
 
 # Argument parser -------------------------------------------------------------------------------------------------
 
@@ -8,12 +8,16 @@ args <- optparse::parse_args(
         add_help_option = T, 
         usage = 'Download annotation files and prepare them for use in VEP.',
         option_list = list(
-            optparse::make_option(c('-o', '--outputFolder'), default = NULL, type = 'character', help = 'Output folder', metavar = 'character')
+            optparse::make_option(c('-o', '--outputFolder'), default = NULL, type = 'character', help = 'Output folder', metavar = 'character'),
+            optparse::make_option(c('-r', '--removeRawFiles'), default = FALSE, type = 'character', help = 'Remove large raw files (gnoMAD)?', metavar = 'logical')
         )
     )
 )
 
 if(is.null(args$outputFolder)) stop('-o / --outputFolder is required.')
+if(Sys.which('bcftools') == '') stop('Please install bcftools.')
+if(Sys.which('bgzip') == '') stop('Please install bgzip')
+if(Sys.which('tabix') == '') stop('Please install tabix')
 
 
 # Initialize logger -----------------------------------------------------------------------------------------------
@@ -47,7 +51,9 @@ filesToDownload$GRCh37 <- list(
     'CADD - InDel'= 'https://kircherlab.bihealth.org/download/CADD/v1.6/GRCh37/InDels.tsv.gz',
     'CADD - InDel Index'= 'https://kircherlab.bihealth.org/download/CADD/v1.6/GRCh37/InDels.tsv.gz.tbi',
     'gnoMAD - Exome' = 'https://storage.googleapis.com/gcp-public-data--gnomad/release/2.1.1/vcf/exomes/gnomad.exomes.r2.1.1.sites.vcf.bgz',
+    'gnoMAD - Exome Index' = 'https://storage.googleapis.com/gcp-public-data--gnomad/release/2.1.1/vcf/exomes/gnomad.exomes.r2.1.1.sites.vcf.bgz.tbi',
     'gnoMAD - Genome' = 'https://storage.googleapis.com/gcp-public-data--gnomad/release/2.1.1/vcf/genomes/gnomad.genomes.r2.1.1.sites.vcf.bgz',
+    'gnoMAD - Genome Index' = 'https://storage.googleapis.com/gcp-public-data--gnomad/release/2.1.1/vcf/genomes/gnomad.genomes.r2.1.1.sites.vcf.bgz.tbi',
     'clinVar' = 'https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh37/clinvar_20210927.vcf.gz',
     'clinVar Index' = 'https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh37/clinvar_20210927.vcf.gz.tbi'
 )
@@ -59,7 +65,9 @@ filesToDownload$GRCh38 <- list(
     'CADD - InDel'= 'https://kircherlab.bihealth.org/download/CADD/v1.6/GRCh38/InDels.tsv.gz',
     'CADD - InDel Index'= 'https://kircherlab.bihealth.org/download/CADD/v1.6/GRCh38/InDels.tsv.gz.tbi',
     'gnoMAD - Exome' = 'https://storage.googleapis.com/gcp-public-data--gnomad/release/2.1.1/liftover_grch38/vcf/exomes/gnomad.exomes.r2.1.1.sites.liftover_grch38.vcf.bgz',
+    'gnoMAD - Exome Index' = 'https://storage.googleapis.com/gcp-public-data--gnomad/release/2.1.1/liftover_grch38/vcf/exomes/gnomad.exomes.r2.1.1.sites.liftover_grch38.vcf.bgz.tbi',
     'gnoMAD - Genome' = 'https://storage.googleapis.com/gcp-public-data--gnomad/release/2.1.1/liftover_grch38/vcf/genomes/gnomad.genomes.r2.1.1.sites.liftover_grch38.vcf.bgz',
+    'gnoMAD - Genome Index' = 'https://storage.googleapis.com/gcp-public-data--gnomad/release/2.1.1/liftover_grch38/vcf/genomes/gnomad.genomes.r2.1.1.sites.liftover_grch38.vcf.bgz.tbi',
     'clinVar' = 'https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/clinvar_20210927.vcf.gz',
     'clinVar Index' = 'https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/clinvar_20210927.vcf.gz.tbi'
 )
@@ -82,50 +90,78 @@ downloadFile <- function(url, outputFolder){
 ParallelLogger::logInfo('\t- Download files.')
 
 invisible(sapply(filesToDownload$GRCh37, function(x) downloadFile(x, file.path(args$outputFolder, 'GRCh37'))))
-invisible(sapply(filesToDownload$GRCh37, function(x) downloadFile(x, file.path(args$outputFolder, 'GRCh38'))))
+invisible(sapply(filesToDownload$GRCh38, function(x) downloadFile(x, file.path(args$outputFolder, 'GRCh38'))))
 
 
 # Prepare GENCODE -------------------------------------------------------------------------------------------------
 
 ParallelLogger::logInfo('\t- Preparing GENCODE.')
 
-# # Remove chr-prefix to be in concordance with CPCT-02 / HMF VCF files.
-# gunzip gencode.v35lift37.annotation.gtf.gz
-# grep -v "#" gencode.v35lift37.annotation.gtf | sort -k1,1 -k4,4n -k5,5n -t$'\t' | sed 's/^chr//' | sed 's/^M/MT/' | bgzip -c > noChrPrefix_gencode.v35lift37.annotation.gtf.gz
+cleanGENCODE <- function(x){
+    
+    # Import.
+    y <- rtracklayer::import.gff(x)
+    
+    # Clean-up identifiers (remove ENSEMBL version number) to make them identical to VEP cache.
+    y$gene_id <- gsub('\\..*','', y$gene_id)
+    y$transcript_id <- gsub('\\..*','', y$transcript_id)
+    y$protein_id <- gsub('\\..*','', y$protein_id)
+    y$exon_id <- gsub('\\..*','', y$exon_id)
+    
+    # Remove chr-prefix.
+    GenomeInfoDb::seqlevelsStyle(y) <- 'NCBI'
+    
+    # Export.
+    newFile <- gsub(basename(x), paste0('noChrPrefix_', basename(x)), x)
+    rtracklayer::export.gff(y, con = newFile, index = T)
+    
+}
 
-# 
-# z <- rtracklayer::import.gff('/mnt/data/ccbc_environment/general/annotation/hg19/GENCODE/noChrPrefix_gencode.v35lift37.annotation.gtf.gz')
-# 
-# # Clean-up identifiers (remove ENSEMBL version number) to make them identical to VEP cache.
-# z$gene_id <- gsub('\\..*','', z$gene_id)
-# z$transcript_id <- gsub('\\..*','', z$transcript_id)
-# z$protein_id <- gsub('\\..*','', z$protein_id)
-# z$exon_id <- gsub('\\..*','', z$exon_id)
-# 
-# rtracklayer::export.gff(z, con = '/mnt/data/ccbc_environment/general/annotation/hg19/GENCODE/noChrPrefix_VEP_gencode.v35lift37.annotation.gtf')
-# 
-# bgzip -c noChrPrefix_VEP_gencode.v35lift37.annotation.gtf > noChrPrefix_VEP_gencode.v35lift37.annotation.gtf.gz
-# tabix -p gff noChrPrefix_VEP_gencode.v35lift37.annotation.gtf.gz
-# 
-# 
+cleanGENCODE(file.path(args$outputFolder, 'GRCh37', basename(filesToDownload$GRCh37$GENCODE)))
+cleanGENCODE(file.path(args$outputFolder, 'GRCh38', basename(filesToDownload$GRCh38$GENCODE)))
+
+
 # # Prepare gnoMAD --------------------------------------------------------------------------------------------------
- 
+
 ParallelLogger::logInfo('\t- Preparing gnoMAD.')
 
-# # # Only keep the max. AF fields and variants passing the gnoMAD filters.
-# # bcftools view -h gnomad.exomes.r2.1.1.sites.vcf.bgz > gnomad.exomes.r2.1.1.sites.AF.vcf
-# # bcftools view -h gnomad.genomes.r2.1.1.sites.vcf.bgz > gnomad.genomes.r2.1.1.sites.AF.vcf
-# # 
-# # bcftools view -f PASS gnomad.exomes.r2.1.1.sites.vcf.bgz | bcftools query -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%QUAL\t%FILTER\tAF=%INFO/AF\n' >> gnomad.exomes.r2.1.1.sites.AF.vcf
-# # 
-# # bcftools view -f PASS gnomad.genomes.r2.1.1.sites.vcf.bgz | bcftools query -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%QUAL\t%FILTER\tAF=%INFO/AF\n' >> gnomad.genomes.r2.1.1.sites.AF.vcf
-# # 
-# # # Sort and tabix BED file.
-# # bgzip gnomad.exomes.r2.1.1.sites.AF.vcf
-# # tabix -p vcf gnomad.exomes.r2.1.1.sites.AF.vcf.gz
-# # 
-# # bgzip gnomad.genomes.r2.1.1.sites.AF.vcf
-# # tabix -p vcf gnomad.genomes.r2.1.1.sites.AF.vcf.gz
-# # 
-# # # Remove original files.
-# # rm -f gnomad.exomes.r2.1.1.sites.vcf.bgz* gnomad.genomes.r2.1.1.sites.vcf.bgz*
+cleangnoMAD <- function(x){
+    
+    # Perform pre-filtering of PASS-only variant and only retain the AF column.
+    cmd <- paste("bcftools view -f PASS", x, "| bcftools query -f '%CHROM\\t%POS\\t%ID\\t%REF\\t%ALT\\t%QUAL\\t%FILTER\\tAF=%INFO/AF\\n' >> ", gsub('\\.vcf.bgz','_AF.vcf', x))
+    base::system(cmd)
+    
+    # Compress and tabix.
+    cmd <- paste('bgzip -c', gsub('\\.vcf.bgz','_AF.vcf', x))
+    base::system(cmd)
+    cmd <- paste('tabix -p vcf', gsub('\\.vcf.bgz','_AF.vcf.gz', x))
+    base::system(cmd)
+    
+}
+
+cleangnoMAD(file.path(args$outputFolder, 'GRCh37', basename(filesToDownload$GRCh37$`gnoMAD - Exome`)))
+cleangnoMAD(file.path(args$outputFolder, 'GRCh38', basename(filesToDownload$GRCh38$`gnoMAD - Exome`)))
+
+cleangnoMAD(file.path(args$outputFolder, 'GRCh37', basename(filesToDownload$GRCh37$`gnoMAD - Genome`)))
+cleangnoMAD(file.path(args$outputFolder, 'GRCh38', basename(filesToDownload$GRCh38$`gnoMAD - Genome`)))
+
+
+# Remove raw files ------------------------------------------------------------------------------------------------
+
+if(args$removeRawFiles == TRUE){
+    
+    base::system(paste('rm -f', file.path(args$outputFolder, 'GRCh37', basename(filesToDownload$GRCh37$`gnoMAD - Exome`))))
+    base::system(paste('rm -f', file.path(args$outputFolder, 'GRCh37', basename(filesToDownload$GRCh37$`gnoMAD - Exome Index`))))
+    base::system(paste('rm -f', file.path(args$outputFolder, 'GRCh37', basename(filesToDownload$GRCh37$`gnoMAD - Genome`))))
+    base::system(paste('rm -f', file.path(args$outputFolder, 'GRCh37', basename(filesToDownload$GRCh37$`gnoMAD - Genome Index`))))
+    
+    base::system(paste('rm -f', file.path(args$outputFolder, 'GRCh38', basename(filesToDownload$GRCh37$`gnoMAD - Exome`))))
+    base::system(paste('rm -f', file.path(args$outputFolder, 'GRCh38', basename(filesToDownload$GRCh37$`gnoMAD - Exome Index`))))
+    base::system(paste('rm -f', file.path(args$outputFolder, 'GRCh38', basename(filesToDownload$GRCh37$`gnoMAD - Genome`))))
+    base::system(paste('rm -f', file.path(args$outputFolder, 'GRCh38', basename(filesToDownload$GRCh37$`gnoMAD - Genome Index`))))
+    
+}
+
+# Finalize --------------------------------------------------------------------------------------------------------
+
+ParallelLogger::logInfo('--- All done! ---')

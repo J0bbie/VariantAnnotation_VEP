@@ -30,9 +30,20 @@ The scripts within this workflow will generate a folder (cache) containing all t
 Following the [author's instructions](https://github.com/Ensembl/ensembl-vep), install VEP and required CPAN plugins.
 
 In addition, the following tools are also required:
+
 - bcftools
 - bgzip
 - tabix
+
+The following command can be used if all requirements are met:
+
+```bash
+# Install cache for GRCh37
+perl INSTALL.pl --NO_TEST --NO_HTSLIB --AUTO alcf --PLUGINS CADD --CACHEDIR <cache> --PLUGINSDIR <plugin> --CONVERT --SPECIES homo_sapiens_vep_104_GRCh37
+
+# Install cache for GRCh38, this needs to be a separate folder.
+perl INSTALL.pl --NO_TEST --NO_HTSLIB --AUTO alcf --PLUGINS CADD --CACHEDIR <cache> --PLUGINSDIR <plugin> --CONVERT --SPECIES homo_sapiens_vep_104_GRCh38
+```
 
 ## **Configuration of additional annotations**
 
