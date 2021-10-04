@@ -43,8 +43,8 @@ if(!is.null(args$outputFolder)) outFile <- file.path(args$outputFolder, outFile)
 # Generate VEP command --------------------------------------------------------------------------------------------
 
 cmd.VEP <- base::sprintf('%s -i %s --fasta %s --fork %s %s --dir_plugins %s --assembly %s --dir_cache %s -o %s --synonyms %s --dir_plugins %s
---custom %s/%s,gnomADe,vcf,exact,0,AF 
---custom %s/%s,gnomADg,vcf,exact,0,AF 
+--custom %s/%s,gnomADe,vcf,exact,0,gnomADe_AF 
+--custom %s/%s,gnomADg,vcf,exact,0,gnomADg_AF 
 --custom %s/clinvar_20210927.vcf.gz,ClinVar,vcf,exact,0,CLNDN,CLNHGVS,CLNSIG 
 --plugin SingleLetterAA 
 --pick --ccds --hgvs --symbol --force_overwrite --numbers --domains --canonical --protein --biotype --uniprot --tsl --appris --gene_phenotype --pubmed --variant_class 
