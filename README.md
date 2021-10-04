@@ -41,9 +41,12 @@ The following command can be used if all requirements are met:
 perl INSTALL.pl --NO_TEST --NO_HTSLIB --AUTO alcf --PLUGINS SingleLetterAA --CACHEDIR /mnt/onco0002/repository/general/annotation/VEP/GRCh37 --PLUGINSDIR /mnt/onco0002/repository/software/ensembl-vep/Plugins/GRCh37/ --CONVERT --SPECIES homo_sapiens_vep_104_GRCh37
 
 # Install cache for GRCh38, this needs to be a separate folder.
-perl INSTALL.pl --NO_TEST --NO_HTSLIB --AUTO alcf --PLUGINS SingleLetterAA --CACHEDIR /mnt/onco0002/repository/general/annotation/VEP/GRCh38 --PLUGINSDIR /mnt/onco0002/repository/software/ensembl-vep/Plugins/GRCh38/ --CONVERT --SPECIES homo_sapiens_vep_104_GRCh37
+perl INSTALL.pl --NO_TEST --NO_HTSLIB --AUTO alcf --PLUGINS SingleLetterAA --CACHEDIR /mnt/onco0002/repository/general/annotation/VEP/GRCh38 --PLUGINSDIR /mnt/onco0002/repository/software/ensembl-vep/Plugins/GRCh38/ --CONVERT --SPECIES homo_sapiens_vep_104_GRCh38
+```
 
-
+If the SingleLetterAA module is not found, download it to the ENSEMBL VEP folder using this command:
+```bash
+wget https://raw.githubusercontent.com/Ensembl/VEP_plugins/release/104/SingleLetterAA.pm
 ```
 
 ### **Configuration of additional annotations**
