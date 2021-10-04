@@ -46,10 +46,6 @@ filesToDownload <- list()
 
 filesToDownload$GRCh37 <- list(
     'GENCODE' = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/latest_release/GRCh37_mapping/gencode.v38lift37.annotation.gtf.gz',
-    'CADD - SNV' = 'https://kircherlab.bihealth.org/download/CADD/v1.6/GRCh37/whole_genome_SNVs.tsv.gz',
-    'CADD - SNV Index' = 'https://kircherlab.bihealth.org/download/CADD/v1.6/GRCh37/whole_genome_SNVs.tsv.gz.tbi',
-    'CADD - InDel'= 'https://kircherlab.bihealth.org/download/CADD/v1.6/GRCh37/InDels.tsv.gz',
-    'CADD - InDel Index'= 'https://kircherlab.bihealth.org/download/CADD/v1.6/GRCh37/InDels.tsv.gz.tbi',
     'gnoMAD - Exome' = 'https://storage.googleapis.com/gcp-public-data--gnomad/release/2.1.1/vcf/exomes/gnomad.exomes.r2.1.1.sites.vcf.bgz',
     'gnoMAD - Exome Index' = 'https://storage.googleapis.com/gcp-public-data--gnomad/release/2.1.1/vcf/exomes/gnomad.exomes.r2.1.1.sites.vcf.bgz.tbi',
     'gnoMAD - Genome' = 'https://storage.googleapis.com/gcp-public-data--gnomad/release/2.1.1/vcf/genomes/gnomad.genomes.r2.1.1.sites.vcf.bgz',
@@ -117,7 +113,7 @@ cleanGENCODE(file.path(args$outputFolder, 'GRCh37', basename(filesToDownload$GRC
 cleanGENCODE(file.path(args$outputFolder, 'GRCh38', basename(filesToDownload$GRCh38$GENCODE)))
 
 
-# # Prepare gnoMAD --------------------------------------------------------------------------------------------------
+# Prepare gnoMAD --------------------------------------------------------------------------------------------------
 
 ParallelLogger::logInfo('\t- Preparing gnoMAD.')
 

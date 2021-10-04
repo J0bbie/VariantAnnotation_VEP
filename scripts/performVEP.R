@@ -23,7 +23,6 @@ if(is.null(args$pathVEP)) stop('-x / --pathVEP is required.')
 if(is.null(args$pathVCF)) stop('-i / --pathVCF is required.')
 if(is.null(args$pathCACHE)) stop('-c / --pathCACHE is required.')
 if(is.null(args$pathFASTA)) stop('-f / --pathFASTA is required.')
-if(is.null(args$pathGTF)) stop('-g / --pathGTF is required.')
 if(is.null(args$pathPLUGIN)) stop('-p / --pathPLUGIN is required.')
 
 # Combine plugin and build.
@@ -43,14 +42,14 @@ if(!is.null(args$outputFolder)) outFile <- file.path(args$outputFolder, outFile)
 
 # Generate VEP command --------------------------------------------------------------------------------------------
 
-cmd.VEP <- base::sprintf('%s -i %s --fasta %s --fork %s --gtf %s --dir_plugins %s --assembly %s --dir_cache %s -o %s --synonyms %s --dir_plugins %s
---custom %s/gnomad.exomes.r2.1.1.sites_AF.vcf.gz,gnomADe,vcf,exact,0,AF 
---custom %s/gnomad.genomes.r2.1.1.sites_AF.vcf.gz,gnomADg,vcf,exact,0,AF 
+cmd.VEP <- base::sprintf('%s -i %s --fasta %s --fork %s %s --dir_plugins %s --assembly %s --dir_cache %s -o %s --synonyms %s --dir_plugins %s
+--custom %s/%s,gnomADe,vcf,exact,0,AF 
+--custom %s/%s,gnomADg,vcf,exact,0,AF 
 --custom %s/clinvar_20210927.vcf.gz,ClinVar,vcf,exact,0,CLNDN,CLNHGVS,CLNSIG 
 --plugin SingleLetterAA 
 --ccds --hgvs --symbol --force_overwrite --numbers --domains --canonical --protein --biotype --uniprot --tsl --appris --gene_phenotype --pubmed --variant_class 
 --vcf_info_field ANN --cache --offline --no_stats 
 --quiet --format vcf --vcf --compress_output bgzip', 
-              args$pathVEP, args$pathVCF, args$pathFASTA, args$threads, args$pathGTF, args$pathPLUGIN, args$build, args$pathCACHE, outFile, args$pathSYNONYM, args$pathPLUGIN, args$pathPLUGIN, args$pathPLUGIN, args$pathPLUGIN)
+              args$pathVEP, args$pathVCF, args$pathFASTA, args$threads, ifelse(!is.null(args$pathGTF), paste('--gtf', args$pathGTF), ''), args$pathPLUGIN, args$build, args$pathCACHE, outFile, args$pathSYNONYM, args$pathPLUGIN, args$pathPLUGIN, ifelse(args$build == 'GRCh37', 'gnomad.exomes.r2.1.1.sites_AF.vcf.gz', 'gnomad.exomes.r2.1.1.sites.liftover_grch38_AF.vcf.gz'), args$pathPLUGIN, ifelse(args$build == 'GRCh37', 'gnomad.genomes.r2.1.1.sites_AF.vcf.gz', 'gnomad.genomes.r2.1.1.sites.liftover_grch38_AF.vcf.gz'), args$pathPLUGIN)
 
 base::system(paste('echo', gsub('\n', '', cmd.VEP)))
