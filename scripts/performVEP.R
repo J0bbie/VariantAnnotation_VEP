@@ -47,7 +47,7 @@ cmd.VEP <- base::sprintf('%s -i %s --fasta %s --fork %s %s --dir_plugins %s --as
 --custom %s/%s,gnomADg,vcf,exact,0,AF 
 --custom %s/clinvar_20210927.vcf.gz,ClinVar,vcf,exact,0,CLNDN,CLNHGVS,CLNSIG 
 --plugin SingleLetterAA 
---ccds --hgvs --symbol --force_overwrite --numbers --domains --canonical --protein --biotype --uniprot --tsl --appris --gene_phenotype --pubmed --variant_class 
+--pick --ccds --hgvs --symbol --force_overwrite --numbers --domains --canonical --protein --biotype --uniprot --tsl --appris --gene_phenotype --pubmed --variant_class 
 --vcf_info_field ANN --cache --offline --no_stats 
 --quiet --format vcf --vcf --compress_output bgzip', 
               args$pathVEP, args$pathVCF, args$pathFASTA, args$threads, ifelse(!is.null(args$pathGTF), paste('--gtf', args$pathGTF), ''), args$pathPLUGIN, args$build, args$pathCACHE, outFile, args$pathSYNONYM, args$pathPLUGIN, args$pathPLUGIN, ifelse(args$build == 'GRCh37', 'gnomad.exomes.r2.1.1.sites_AF.vcf.gz', 'gnomad.exomes.r2.1.1.sites.liftover_grch38_AF.vcf.gz'), args$pathPLUGIN, ifelse(args$build == 'GRCh37', 'gnomad.genomes.r2.1.1.sites_AF.vcf.gz', 'gnomad.genomes.r2.1.1.sites.liftover_grch38_AF.vcf.gz'), args$pathPLUGIN)
